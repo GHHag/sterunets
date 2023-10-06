@@ -1,3 +1,5 @@
+# Go
+
 # If you prefer the allow list template instead of the deny list, see community template:
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #
@@ -19,3 +21,47 @@
 
 # Go workspace file
 go.work
+
+
+# Python
+
+# Byte-compiled / optimized Python files
+__pycache__/
+*.pyc
+*.pyo
+__pycache__/
+*.pyc
+*.pyo
+
+# Python virtual environments
+venv/
+env/
+*.pyc
+
+# IDE or editor-specific files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*.db
+*.log
+*.sqlite
+*.sqlite3
+*.h5
+
+# Dependency directories
+# Never commit your virtual environment
+# See https://docs.python.org/3/library/venv.html
+# In some cases you might want to include these in your repository
+# Keep this section if you use pipenv, poetry, or pip-tools
+# Comment them out if you're managing dependencies manually
+# /venv/
+# /env/
+# /bin/
+# /lib/
+# /include/
+# .Python
