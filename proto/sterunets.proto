@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package sterunets;
+
+option go_package = "../steru";
+
+service SterunetsService {
+	rpc SomeInput (SomeRequest) returns (SomeResponse);
+}
+
+message SomeRequest {
+	 map<string, string> data = 1;
+}
+
+message SomeResponse {
+	 map<string, string> data = 1;
+}
