@@ -8,10 +8,23 @@ service SterunetsService {
 	rpc SomeInput (SomeRequest) returns (SomeResponse);
 }
 
-message SomeRequest {
-	 map<string, string> data = 1;
+message RequestType1 {
+	map<string, string> data = 1;
+	map<string, int64> data1 = 2;
+	map<string, bool> data2 = 3;
+}
+
+message MultiType {
+	string string_value = 1;
+	int64 int_value = 2;
+	bool bool_value = 3;
+}
+
+message RequestType2 {
+	map<string, MultiType> data = 1;
 }
 
 message SomeResponse {
 	 map<string, string> data = 1;
+	 bool successful = 2;
 }
