@@ -2,7 +2,7 @@ import grpc
 from concurrent import futures
 
 
-def main():
+def run_grpc_server():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
     server.add_insecure_port('[::]:5001')
@@ -12,4 +12,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    run_grpc_server()
