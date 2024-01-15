@@ -62,3 +62,7 @@ class TimeSeriesDataHandler(DataHandler):
         super().__init__(features_blueprint, raw_data_fields, dataframe)
         self.__start_dt: dt.datetime = start_dt
         self.__end_dt: dt.datetime = end_dt
+
+
+if __name__ == '__main__':
+    pass
