@@ -65,3 +65,5 @@ env/
 # /lib/
 # /include/
 # .Python
+
+*.egg-info/
