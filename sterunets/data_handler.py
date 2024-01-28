@@ -3,19 +3,17 @@ import json
 from collections import Counter
 
 import pandas as pd
-# import numpy as np
 
 
 class FeatureBlueprint:
 
     def __init__(
-        self, name: str, feature_func: callable, 
-        arguments: tuple, required_periods: int
+        self, name: str, feature_func: callable, arguments: tuple,
     ):
         self.__name: str = name
+        # TODO: Implement protocol for feature_func required behaviour
         self.__feature_func: callable = feature_func
         self.__arguments: tuple = arguments
-        self.__required_periods: int = required_periods
 
     @property
     def name(self) -> str:
@@ -29,15 +27,8 @@ class FeatureBlueprint:
     def arguments(self) -> tuple:
         return self.__arguments
 
-    @property
-    def required_periods(self) -> int:
-        return self.__required_periods
-
-    def __call__(self, dataframe: pd.DataFrame):
-        return self.__feature_func(
-            dataframe.iloc[:, -self.__required_periods:], 
-            *self.__arguments
-        )
+    def __call__(self, dataframe: pd.DataFrame, **kwargs):
+        self.__feature_func(dataframe, *self.__arguments, **kwargs)
 
 
 class DataHandler:
@@ -52,47 +43,74 @@ class DataHandler:
         self.__dataframe: pd.DataFrame = dataframe
 
     @property
-    def dataframe(self):
+    def dataframe(self) -> pd.DataFrame:
+        return self.__dataframe if self.__dataframe is not None else None
+
+    def get_dataframe(self) -> pd.DataFrame:
         return self.__dataframe if self.__dataframe is not None else None
 
     def add_feature_blueprint(self, feature_blueprint: FeatureBlueprint):
         self.__feature_blueprints.append(feature_blueprint)
 
-    def add_json_data(self, json_data: json):
-        loaded_json_data: dict = json.loads(json_data)
-        if self.__feature_counter != Counter(loaded_json_data.keys()):
+    def add_dict_data(self, dict_data: dict):
+        if self.__feature_counter != Counter(dict_data.keys()):
             raise ValueError('Unexpected format of input data.')
 
         for field, data_type in self.__raw_data_fields.items():
-            if type(loaded_json_data.get(field)) != data_type:
+            if type(dict_data.get(field)) != data_type:
                 raise TypeError(
                     f'"{field}" is not of the expected type "{data_type}".'
                 )
 
-        columns = self.__dataframe.columns
-        # TODO: Evaluate if possible to use from_dict method instead to
-        # create the new dataframe here.
-        new_data = pd.DataFrame([loaded_json_data], columns=columns)
+        new_dataframe = pd.DataFrame.from_records([dict_data])
         self.__dataframe = pd.concat(
-            [self.__dataframe, new_data], ignore_index=True
+            [self.__dataframe, new_dataframe], ignore_index=True
         )
 
-    def apply_features(self):
+    def add_json_data(self, json_data: json):
+        loaded_json_data: dict = json.loads(json_data)
+        self.add_dict_data(loaded_json_data)
+
+    def apply_features(self, **kwargs):
         for feature_blueprint in self.__feature_blueprints:
-            # self.__dataframe = feature_blueprint(self.__dataframe)
-            feature_blueprint(self.__dataframe)
-        print(self.__dataframe)
+            feature_blueprint(self.__dataframe, **kwargs)
 
 
 class TimeSeriesDataHandler(DataHandler):
 
     def __init__(
         self, raw_data_fields: dict[str, type], dataframe: pd.DataFrame,
-        start_dt: dt.datetime, end_dt: dt.datetime
+        datetime_column: str, datetime_format='%Y-%m-%d %H:%M:%S'
     ):
         super().__init__(raw_data_fields, dataframe)
-        self.__start_dt: dt.datetime = start_dt
-        self.__end_dt: dt.datetime = end_dt
+        self.__datetime_column = datetime_column
+        self.__datetime_format = datetime_format
+        self.get_dataframe()[self.__datetime_column] = pd.to_datetime(
+            self.get_dataframe()[self.__datetime_column]
+        )
+        self.__latest_datetime = (
+            self.get_dataframe().iloc[-1][self.__datetime_column]
+        )
+
+    def add_time_series_data(self, json_data: json):
+        loaded_json_data: dict = json.loads(json_data)
+        try:
+            loaded_json_data[self.__datetime_column] = dt.datetime.strptime(
+                loaded_json_data.get(self.__datetime_column),
+                self.__datetime_format
+            )
+        except Exception as e:
+            raise e
+
+        self.add_dict_data(loaded_json_data)
+
+    # make sure data can't be added multiple times for the same datetime
+    def _datetime_check(self):
+        pass
+
+    # make sure the data is following a consistent frequency
+    def _frequency_check(self):
+        pass
 
 
 if __name__ == '__main__':
