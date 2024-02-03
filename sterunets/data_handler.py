@@ -73,33 +73,28 @@ class DataHandler:
                 f'rows, but found {len(self.__dataframe)} rows.'
             )
 
-    # define similar function for lists of dicts?
-    #
-    # handle adding of different data formats in the same method by
-    # passing a kwargs such as format='json'
-    def add_dict_data(self, dict_data: dict):
-        if self.__feature_counter != Counter(dict_data.keys()):
+    # define similar function for lists of data?
+    # how to type hint if 'data' can be either json or dict?
+    def add_data(self, data, data_format='json'):
+        if data_format == 'json':
+            data: dict = json.loads(data)
+
+        if self.__feature_counter != Counter(data.keys()):
             raise ValueError('Unexpected format of input data.')
 
         for field, data_type in self.__raw_data_fields.items():
-            if type(dict_data.get(field)) != data_type:
+            if type(data.get(field)) != data_type:
                 raise TypeError(
                     f'"{field}" is not of the expected type "{data_type}".'
                 )
 
-        new_dataframe = pd.DataFrame.from_records([dict_data])
+        new_dataframe = pd.DataFrame.from_records([data])
         self.concat_dataframes(new_dataframe)
-
-    # define similar function for lists of json objects?
-    def add_json_data(self, json_data: json):
-        loaded_json_data: dict = json.loads(json_data)
-        self.add_dict_data(loaded_json_data)
 
     def apply_features(self, **kwargs):
         for feature_blueprint in self.__feature_blueprints:
             feature_blueprint(self.__dataframe, **kwargs)
 
-    # call this from where?
     def _intactness_check(self) -> bool:
         return (
             self.__number_of_periods - self.__expected_row_drops
@@ -132,39 +127,36 @@ class TimeSeriesDataHandler(DataHandler):
             self.dataframe.set_index(self.__datetime_column, inplace=True)
         self.dataframe.set_index(self.__datetime_column, inplace=True)
         self.__latest_datetime: pd.Timestamp = (
-            # self.dataframe.iloc[-1][self.__datetime_column]
-            # self.dataframe.index[-1]
             self.dataframe.last_valid_index()
         )
 
-    # define a similar function that works on list of multiple json data points?
-    def add_time_series_data(self, json_data: json):
-        loaded_json_data: dict = json.loads(json_data)
-        try:
-            loaded_json_data[self.__datetime_column] = dt.datetime.strptime(
-                loaded_json_data.get(self.__datetime_column),
-                self.__datetime_format
-            )
-        # make sure this exception works well
-        # is it good or bad to raise an exception like this?
-        except Exception as e:
-            raise e
+    @property
+    def latest_datetime(self) -> pd.Timestamp:
+        return self.__latest_datetime
 
-        self.add_dict_data(loaded_json_data)
+    # define a similar method that works on list of multiple json data points
+    # or add that functionality to this method
+    def add_data(self, data, data_format='json'):
+        if data_format == 'json':
+            data: dict = json.loads(data)
+            try:
+                data[self.__datetime_column] = dt.datetime.strptime(
+                    data.get(self.__datetime_column),
+                    self.__datetime_format
+                )
+            except ValueError as e:
+                raise e
 
-    # handle adding of different data formats in the same method by
-    # passing a kwargs such as format='json'
-    def add_dict_data(self, dict_data: dict):
-        if self.feature_counter != Counter(dict_data.keys()):
+        if self.feature_counter != Counter(data.keys()):
             raise ValueError('Unexpected format of input data.')
 
         for field, data_type in self.raw_data_fields.items():
-            if type(dict_data.get(field)) != data_type:
+            if type(data.get(field)) != data_type:
                 raise TypeError(
                     f'"{field}" is not of the expected type "{data_type}".'
                 )
 
-        new_dataframe = pd.DataFrame.from_records([dict_data])
+        new_dataframe = pd.DataFrame.from_records([data])
         new_dataframe[self.__datetime_column] = pd.to_datetime(
             new_dataframe[self.__datetime_column]
         )
