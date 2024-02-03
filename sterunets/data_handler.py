@@ -3,7 +3,6 @@ import json
 from collections import Counter
 
 import pandas as pd
-import numpy as np
 
 
 class FeatureBlueprint:
@@ -129,6 +128,7 @@ class TimeSeriesDataHandler(DataHandler):
         self.__latest_datetime: pd.Timestamp = (
             self.dataframe.last_valid_index()
         )
+        self.__inferred_frequency = self.dataframe.index.inferred_freq
 
     @property
     def latest_datetime(self) -> pd.Timestamp:
@@ -139,13 +139,14 @@ class TimeSeriesDataHandler(DataHandler):
     def add_data(self, data, data_format='json'):
         if data_format == 'json':
             data: dict = json.loads(data)
-            try:
-                data[self.__datetime_column] = dt.datetime.strptime(
-                    data.get(self.__datetime_column),
-                    self.__datetime_format
-                )
-            except ValueError as e:
-                raise e
+
+        try:
+            data[self.__datetime_column] = dt.datetime.strptime(
+                data.get(self.__datetime_column),
+                self.__datetime_format
+            )
+        except ValueError as e:
+            raise e
 
         if self.feature_counter != Counter(data.keys()):
             raise ValueError('Unexpected format of input data.')
@@ -160,23 +161,36 @@ class TimeSeriesDataHandler(DataHandler):
         new_dataframe[self.__datetime_column] = pd.to_datetime(
             new_dataframe[self.__datetime_column]
         )
+        self._datetime_check(new_dataframe[self.__datetime_column])
         new_dataframe.set_index(self.__datetime_column, inplace=True)
         self.concat_dataframes(new_dataframe)
 
     def add_time_series_data_list(self, json_data: json):
         pass
 
-    # make sure data can't be added multiple times for the same datetime
-    def _datetime_check(self):
-        pass
+    def _datetime_check(self, new_datetimes: pd.Series):
+        existing_datetimes = set(self.dataframe.index)
+        new_datetimes = set(new_datetimes)
+        duplicate_datetimes = existing_datetimes.intersection(new_datetimes)
+        if duplicate_datetimes:
+            raise ValueError(
+                'New datetime values already exists in the index '
+                f'of the dataframe: {duplicate_datetimes}'
+            )
 
-    # make sure the data is following a consistent frequency
-    def _frequency_check(self):
-        pass
-
-
-if __name__ == '__main__':
-    pass
+    # will the inferred_freq change if a data point of another is appended
+    # to the dataframe? if so call this method to ensure frequenct is consistent
+    # after adding a new data point
+    def _frequency_check(self, new_datetimes: pd.DataFrame):
+        new_datetimes_frequency = new_datetimes.index.inferred_freq
+        if (
+            self.__inferred_frequency is None or 
+            new_datetimes_frequency is None or
+            self.__inferred_frequency != new_datetimes_frequency
+        ):
+            raise ValueError(
+                'Datetime index does not have a consistent frequency.'
+            )
 
 
 # df.shape - tuple with data shape
